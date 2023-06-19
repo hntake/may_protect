@@ -27,10 +27,10 @@ class MyApp extends StatelessWidget {
             if (token != null && token.isNotEmpty) {
               return Dashboard(title: title);
             } else {
-              return LoginPage();
+              return Login();
             }
           } else {
-            return LoginPage();
+            return Login();
           }
         },
       ),

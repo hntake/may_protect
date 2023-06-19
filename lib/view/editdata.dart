@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:may_protect/Controllers/databasehelper.dart';
 import 'package:may_protect/view/dashboard.dart';
+import '../../methods/api.dart';
+import 'package:may_protect/helper/constant.dart';
+import 'package:may_protect/view/login.dart';
+
+
 
 
 class EditData extends StatefulWidget{
@@ -36,6 +41,7 @@ class EditDataState extends State<EditData> {
 
   @override
   Widget build(BuildContext context) {
+    print(widget.list[widget.index]);
 
     return MaterialApp(
       title: 'Update Profile',
@@ -96,24 +102,46 @@ class EditDataState extends State<EditData> {
               Container(
                 height: 50,
                 child: ElevatedButton(
-                  onPressed: (){
-                    databaseHelper.editData(widget.list[widget.index]['id']
-                        , _nameController.text.trim(), _emailController.text.trim(),
-                    _tel1Controller.text.trim(), _tel2Controller.text.trim());
-                    Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (BuildContext context) => Dashboard(title: 'Dashboard'),
-                        )
-                    );
+                  onPressed: () {
+                    void updateData() async {
+                      int userId = widget.list[widget.index]['id'] ?? 0;
+                      String idValue = userId != null ? userId.toString() : '';
+                      if (userId != null) {
+                      final data = {
+                        'id': userId.toString(),
+                        'name': _nameController.text.trim(),
+                        'email': _emailController.text.trim(),
+                        'tel1': _tel1Controller.text.trim(),
+                        'tel2': _tel2Controller.text.trim(),
+                      };
+                        final Map<String, String> requestData = data.map((key, value) => MapEntry(key, value.toString()));
+
+                        final result = await API().putRequest(
+                          route: '/update_user_fl/$userId', data: requestData,
+                        );
+
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (BuildContext context) =>
+                                Dashboard(title: 'Dashboard'),
+                          ),
+                        );
+                      } else {
+                        return print('Some error has Occurred');
+                      }
+
+
+                    }
+                    // 呼び出し元のコード内でupdateData()を呼び出す
+                    updateData();
                   },
-                  style: ElevatedButton.styleFrom(primary: Colors.blue),
+              style: ElevatedButton.styleFrom(primary: Colors.blue),
                   child: Text(
                     'Update',
                     style: TextStyle(color: Colors.white),
                 ),
                ),
-              ),
-              Padding(padding: EdgeInsets.only(top: 44.0),),
+              )
 
 
 

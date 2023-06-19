@@ -63,7 +63,7 @@ class DashboardState extends State<Dashboard> {
                   _save('0');
                   Navigator.of(context).push(
                       new MaterialPageRoute(
-                        builder: (BuildContext context) => new LoginPage(),
+                        builder: (BuildContext context) => new Login(),
                       )
                   );
                 },
@@ -77,7 +77,7 @@ class DashboardState extends State<Dashboard> {
               _save('0');
               Navigator.of(context).push(
                 MaterialPageRoute(
-                  builder: (BuildContext context) => LoginPage(),
+                  builder: (BuildContext context) => Login(),
                 ),
               );
             },

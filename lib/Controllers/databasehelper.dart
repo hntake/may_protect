@@ -14,7 +14,7 @@ class DatabaseHelper{
     String myUrl = "$serverUrl/login";
     final response = await http.post(Uri.parse(myUrl),
         headers: {
-          'Accept':'application/json'
+          'Accept':'application/json',
           'Access-Control-Allow-Origin': '*', // CORS設定
           'Access-Control-Allow-Methods': 'POST', // CORS設定
         },
@@ -83,11 +83,11 @@ class DatabaseHelper{
     final key = 'token';
     final value = prefs.get(key ) ?? 0;
 
-    String myUrl = "http://localhost/api/edit_user_fl/$id";
+    String myUrl = "http://localhost/api/update_user_fl/$id";
     http.post(Uri.parse(myUrl),
         headers: {
           'Accept':'application/json',
-          'Authorization' : 'Bearer $value'
+          'Authorization' : 'Bearer $value',
           'Access-Control-Allow-Origin': '*', // CORS設定
           'Access-Control-Allow-Methods': 'POST', // CORS設定
         },
