@@ -326,7 +326,7 @@ class _HomeState extends State<Home> {
                         list: [
                           {
                             'id': preferences.getInt('id'), // getInt('id')の結果をそのまま代入
-                          'name': preferences.getString('name'),
+                            'name': preferences.getString('name'),
                             'email': preferences.getString('email'),
                             'tel1': preferences.getString('tel1'),
                             'tel2': preferences.getString('tel2'),
@@ -479,7 +479,7 @@ class _EditDataState extends State<EditData> {
                       Navigator.of(context).push(
                         MaterialPageRoute(
                           builder: (BuildContext context) =>
-                              Dashboard(title: 'Dashboard'),
+                              Home(),
                         ),
                       );
                     } else {

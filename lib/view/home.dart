@@ -39,7 +39,7 @@ class _HomeState extends State<Home> {
     preferences.clear();
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(
-        builder: (context) => LoginPage(),
+        builder: (context) => Login(),
 
       ),
     );
