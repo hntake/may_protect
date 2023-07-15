@@ -20,13 +20,19 @@ class Login extends StatefulWidget {
 class _LoginState extends State<Login> {
   TextEditingController email = TextEditingController();
   TextEditingController password = TextEditingController();
+  bool _isLoading = false;
 
   Future<void> saveToken(String token) async {
     SharedPreferences preferences = await SharedPreferences.getInstance();
     await preferences.setString('token', token);
+
   }
 
   void loginUser() async {
+    setState(() {
+      _isLoading = true;
+    });
+
     final data = {
       'email': email.text.toString(),
       'password': password.text.toString(),
@@ -65,6 +71,8 @@ class _LoginState extends State<Login> {
       await preferences.setInt('sun1', int.parse(response['lost']['sun1']));
       await preferences.setInt('sun2', int.parse(response['lost']['sun2']));
       await preferences.setInt('sun3', int.parse(response['lost']['sun3']));
+      await preferences.setString('mode', response['lost']['mode']);
+
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -77,6 +85,9 @@ class _LoginState extends State<Login> {
         ),
       );
     }
+    setState(() {
+      _isLoading = false;
+    });
   }
 
   @override

@@ -1,4 +1,7 @@
 import 'package:may_protect/view/login.dart';
+import 'package:may_protect/view/stop.dart';
+import 'package:may_protect/view/suspend.dart';
+import 'package:may_protect/view/again.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -6,27 +9,36 @@ import 'package:may_protect/Controllers/databasehelper.dart';
 import 'package:may_protect/view/dashboard.dart';
 import '../../methods/api.dart';
 import 'package:may_protect/helper/constant.dart';
-
-
-
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 
 
 class Home extends StatefulWidget {
-  const Home({Key? key}) : super(key: key);
+  final Map<String, dynamic>? updatedData; // 追加
+  final Map<String, dynamic>? modeData; // 追加
+  const Home({Key? key, this.updatedData, this.modeData}) : super(key: key);
+
+
+
 
   @override
   State<Home> createState() => _HomeState();
 }
+
 class EditData extends StatefulWidget {
   final List<dynamic> list;
   final int index;
   final SharedPreferences preferences;
+  final Map<String, dynamic>? updatedData; // 追加
+
 
   const EditData({
     required this.list,
     required this.index,
     required this.preferences,
+    this.updatedData, // 追加
+
   });
 
 
@@ -37,22 +49,31 @@ class EditData extends StatefulWidget {
 class _HomeState extends State<Home> {
   late SharedPreferences preferences;
   bool isLoading = false;
-
+  late int mode; // モードの状態を保持する変数を追加
 
 
   @override
   void initState() {
     super.initState();
-    getUserData();
+    initializeData();
   }
 
-  void getUserData() async {
+  Future<void> initializeData() async {
+
     setState(() {
       isLoading = true;
     });
     preferences = await SharedPreferences.getInstance();
     setState(() {
       isLoading = false;
+      // 編集後のデータを受け取り、状態を更新する
+      if (widget.updatedData != null) {
+        preferences.setString('name', widget.updatedData!['name']);
+        preferences.setString('email', widget.updatedData!['email']);
+        preferences.setString('tel1', widget.updatedData!['tel1']);
+        preferences.setString('tel2', widget.updatedData!['tel2']);
+        preferences.setString('mode', widget.modeData!['mode']); // modeDataを保存
+      }
 
     });
   }
@@ -74,13 +95,14 @@ class _HomeState extends State<Home> {
       body: SafeArea(
         child: isLoading
             ? const Center(
-          child: CircularProgressIndicator(),
-        )
-            : Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            InkWell(
+              child: CircularProgressIndicator(),
+          )
+            : SingleChildScrollView(
+               child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                InkWell(
               onTap: () {
                 logout();
               },
@@ -98,117 +120,164 @@ class _HomeState extends State<Home> {
                 ),
               ),
             ),
-            SizedBox(
-              height: 40,
-            ),
-            Padding(
-              padding: EdgeInsets.all(40.0),
-
-              child: Container(
-                margin: EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  border: Border.all(color: Colors.black),
-                ),
-                child: Table(
-                  border: TableBorder.all(color: Colors.black),
-                  defaultVerticalAlignment: TableCellVerticalAlignment.middle,
-                  children: [
-                    TableRow(
-                      children: [
-                        TableCell(
-                          child: Container(
-                            padding: EdgeInsets.all(8),
-                            color: Colors.grey[200],
-                            child: Text(
-                              'id ',
-                              style: TextStyle(fontWeight: FontWeight.bold),
-                            ),
-                          ),
-                        ),
-                        TableCell(
-                          child: Container(
-                            padding: EdgeInsets.all(8),
-                            color: Colors.grey[200],
-                            child: Text(
-                              '名前 ',
-                              style: TextStyle(fontWeight: FontWeight.bold),
-                            ),
-                          ),
-                        ),
-                        TableCell(
-                          child: Container(
-                            padding: EdgeInsets.all(8),
-                            color: Colors.grey[200],
-                            child: Text(
-                              'メールアドレス ',
-                              style: TextStyle(fontWeight: FontWeight.bold),
-                            ),
-                          ),
-                        ),
-                        TableCell(
-                          child: Container(
-                            padding: EdgeInsets.all(8),
-                            color: Colors.grey[200],
-                            child: Text(
-                              '連絡先① ',
-                              style: TextStyle(fontWeight: FontWeight.bold),
-                            ),
-                          ),
-                        ),
-                        TableCell(
-                          child: Container(
-                            padding: EdgeInsets.all(8),
-                            color: Colors.grey[200],
-                            child: Text(
-                              '連絡先② ',
-                              style: TextStyle(fontWeight: FontWeight.bold),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    TableRow(
-                      children: [
-                        TableCell(
-                          child: Container(
-                            padding: EdgeInsets.all(8),
-                            child: Text(
-                                '${preferences.getInt('id').toString()}'),
-                          ),
-                        ),
-                        TableCell(
-                          child: Container(
-                            padding: EdgeInsets.all(8),
-                            child: Text(
-                                '${preferences.getString('name').toString()}'),
-                          ),
-                        ),
-                        TableCell(
-                          child: Container(
-                            padding: EdgeInsets.all(8),
-                            child: Text(
-                                '${preferences.getString('email').toString()}'),
-                          ),
-                        ),
-                        TableCell(
-                          child: Container(
-                            padding: EdgeInsets.all(8),
-                            child: Text(
-                                '${preferences.getString('tel1').toString()}'),
-                          ),
-                        ),
-                        TableCell(
-                          child: Container(
-                            padding: EdgeInsets.all(8),
-                            child: Text(
-                                '${preferences.getString('tel2').toString()}'),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
+            Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                if (int.parse(preferences.getString('mode') ?? '0') == 0)
+                  Column(
+                    children: [
+                      ElevatedButton(
+                        onPressed: () {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) =>
+              SuspendPage(
+                list: [
+                  {
+                    'id': preferences.getInt('id'),
+                    'name': preferences.getString('mode'),
+                  }
+                ],
+                index: 0,
+                preferences: preferences,
               ),
+        ),
+      );
+    },
+                          child: Text('一時停止画面に移動'),
+                      ),
+                      SizedBox(height: 10), // 空間を作成するためにSizedBoxを挿入
+                      ElevatedButton(
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (context) =>
+                                StopPage(
+                                  list: [
+                                    {
+                                      'id': preferences.getInt('id'),
+                                      'name': preferences.getString('mode'),
+                                    }
+                                  ],
+                                  index: 0,
+                                  preferences: preferences,
+                                ),
+                                  ),
+
+                          );
+                        },
+                        child: Text('停止画面に移動'),
+                      ),
+                    ],
+                  )
+                else
+                  ElevatedButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) =>
+                            AgainPage(
+                              list: [
+                                {
+                                  'id': preferences.getInt('id'),
+                                  'name': preferences.getString('mode'),
+                                }
+                              ],
+                              index: 0,
+                              preferences: preferences,
+                            ),
+                          ),
+                      );
+                    },
+                    child: Text('再開画面に移動'),
+                  ),
+              ],
+            ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SizedBox(
+                  height: 40,
+                ),
+                Padding(
+                  padding: EdgeInsets.all(40.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        padding: EdgeInsets.all(8),
+                        child: Text(
+                          'id ',
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                      Container(
+                        padding: EdgeInsets.all(8),
+                        child: Text(
+                          '${preferences.getInt('id').toString()}',
+                        ),
+                      ),
+                      SizedBox(height: 20),
+                      Container(
+                        padding: EdgeInsets.all(8),
+                        child: Text(
+                          '名前 ',
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                      Container(
+                        padding: EdgeInsets.all(8),
+                        child: Text(
+                          '${preferences.getString('name').toString()}',
+                        ),
+                      ),
+                      SizedBox(height: 20),
+                      Container(
+                        padding: EdgeInsets.all(8),
+                        child: Text(
+                          'メールアドレス ',
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                      Container(
+                        padding: EdgeInsets.all(8),
+                        child: Text(
+                          '${preferences.getString('email').toString()}',
+                        ),
+                      ),
+                      SizedBox(height: 20),
+                      Container(
+                        padding: EdgeInsets.all(8),
+                        child: Text(
+                          '連絡先① ',
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                      Container(
+                        padding: EdgeInsets.all(8),
+                        child: Text(
+                          '${preferences.getString('tel1').toString()}',
+                        ),
+                      ),
+                      SizedBox(height: 20),
+                      Container(
+                        padding: EdgeInsets.all(8),
+                        child: Text(
+                          '連絡先② ',
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                      Container(
+                        padding: EdgeInsets.all(8),
+                        child: Text(
+                          '${preferences.getString('tel2').toString()}',
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
             SizedBox(height: 10),
             Container(
@@ -248,67 +317,67 @@ class _HomeState extends State<Home> {
                   TableRow(
                     children: [
                       TableCell(child: Text('火曜日')),
-                      TableCell(child: Text('mon1: ${preferences.getInt(
-                          'mon1')}' == 0 ? '連絡先①' : '連絡先②')),
-                      TableCell(child: Text('mon2: ${preferences.getInt(
-                          'mon2')}' == 0 ? '連絡先①' : '連絡先②')),
-                      TableCell(child: Text('mon3: ${preferences.getInt(
-                          'mon3')}' == 0 ? '連絡先①' : '連絡先②')),
+                      TableCell(child: Text('tue1: ${preferences.getInt(
+                          'tue1')}' == 0 ? '連絡先①' : '連絡先②')),
+                      TableCell(child: Text('tue2: ${preferences.getInt(
+                          'tue2')}' == 0 ? '連絡先①' : '連絡先②')),
+                      TableCell(child: Text('tue3: ${preferences.getInt(
+                          'tue3')}' == 0 ? '連絡先①' : '連絡先②')),
                     ],
                   ),
                   TableRow(
                     children: [
                       TableCell(child: Text('水曜日')),
-                      TableCell(child: Text('mon1: ${preferences.getInt(
-                          'mon1')}' == 0 ? '連絡先①' : '連絡先②')),
-                      TableCell(child: Text('mon2: ${preferences.getInt(
-                          'mon2')}' == 0 ? '連絡先①' : '連絡先②')),
-                      TableCell(child: Text('mon3: ${preferences.getInt(
-                          'mon3')}' == 0 ? '連絡先①' : '連絡先②')),
+                      TableCell(child: Text('wed1: ${preferences.getInt(
+                          'wed1')}' == 0 ? '連絡先①' : '連絡先②')),
+                      TableCell(child: Text('wed2: ${preferences.getInt(
+                          'wed2')}' == 0 ? '連絡先①' : '連絡先②')),
+                      TableCell(child: Text('wed3: ${preferences.getInt(
+                          'wed3')}' == 0 ? '連絡先①' : '連絡先②')),
                     ],
                   ),
                   TableRow(
                     children: [
                       TableCell(child: Text('木曜日')),
-                      TableCell(child: Text('mon1: ${preferences.getInt(
-                          'mon1')}' == 0 ? '連絡先①' : '連絡先②')),
-                      TableCell(child: Text('mon2: ${preferences.getInt(
-                          'mon2')}' == 0 ? '連絡先①' : '連絡先②')),
-                      TableCell(child: Text('mon3: ${preferences.getInt(
-                          'mon3')}' == 0 ? '連絡先①' : '連絡先②')),
+                      TableCell(child: Text('thu1: ${preferences.getInt(
+                          'thu1')}' == 0 ? '連絡先①' : '連絡先②')),
+                      TableCell(child: Text('thu2: ${preferences.getInt(
+                          'thu2')}' == 0 ? '連絡先①' : '連絡先②')),
+                      TableCell(child: Text('thu3: ${preferences.getInt(
+                          'thu3')}' == 0 ? '連絡先①' : '連絡先②')),
                     ],
                   ),
                   TableRow(
                     children: [
                       TableCell(child: Text('金曜日')),
-                      TableCell(child: Text('mon1: ${preferences.getInt(
-                          'mon1')}' == 0 ? '連絡先①' : '連絡先②')),
-                      TableCell(child: Text('mon2: ${preferences.getInt(
-                          'mon2')}' == 0 ? '連絡先①' : '連絡先②')),
-                      TableCell(child: Text('mon3: ${preferences.getInt(
-                          'mon3')}' == 0 ? '連絡先①' : '連絡先②')),
+                      TableCell(child: Text('fri1: ${preferences.getInt(
+                          'fri1')}' == 0 ? '連絡先①' : '連絡先②')),
+                      TableCell(child: Text('fri2: ${preferences.getInt(
+                          'fri2')}' == 0 ? '連絡先①' : '連絡先②')),
+                      TableCell(child: Text('fri3: ${preferences.getInt(
+                          'fri3')}' == 0 ? '連絡先①' : '連絡先②')),
                     ],
                   ),
                   TableRow(
                     children: [
                       TableCell(child: Text('土曜日')),
-                      TableCell(child: Text('mon1: ${preferences.getInt(
-                          'mon1')}' == 0 ? '連絡先①' : '連絡先②')),
-                      TableCell(child: Text('mon2: ${preferences.getInt(
-                          'mon2')}' == 0 ? '連絡先①' : '連絡先②')),
-                      TableCell(child: Text('mon3: ${preferences.getInt(
-                          'mon3')}' == 0 ? '連絡先①' : '連絡先②')),
+                      TableCell(child: Text('sat1: ${preferences.getInt(
+                          'sat1')}' == 0 ? '連絡先①' : '連絡先②')),
+                      TableCell(child: Text('sat2: ${preferences.getInt(
+                          'sat2')}' == 0 ? '連絡先①' : '連絡先②')),
+                      TableCell(child: Text('sat3: ${preferences.getInt(
+                          'sat3')}' == 0 ? '連絡先①' : '連絡先②')),
                     ],
                   ),
                   TableRow(
                     children: [
                       TableCell(child: Text('日曜日')),
-                      TableCell(child: Text('mon1: ${preferences.getInt(
-                          'mon1')}' == 0 ? '連絡先①' : '連絡先②')),
-                      TableCell(child: Text('mon2: ${preferences.getInt(
-                          'mon2')}' == 0 ? '連絡先①' : '連絡先②')),
-                      TableCell(child: Text('mon3: ${preferences.getInt(
-                          'mon3')}' == 0 ? '連絡先①' : '連絡先②')),
+                      TableCell(child: Text('sun1: ${preferences.getInt(
+                          'sun1')}' == 0 ? '連絡先①' : '連絡先②')),
+                      TableCell(child: Text('sun2: ${preferences.getInt(
+                          'sun2')}' == 0 ? '連絡先①' : '連絡先②')),
+                      TableCell(child: Text('sun3: ${preferences.getInt(
+                          'sun3')}' == 0 ? '連絡先①' : '連絡先②')),
                     ],
                   ),
                 ],
@@ -337,13 +406,24 @@ class _HomeState extends State<Home> {
                         preferences: preferences,
                       ),
                     ),
-                  );
+                  ).then((updatedData) {
+                    if (updatedData != null) {
+                      setState(() {
+                        // 編集後のデータを受け取り、状態を更新する
+                        preferences.setString('name', updatedData['name']);
+                        preferences.setString('email', updatedData['email']);
+                        preferences.setString('tel1', updatedData['tel1']);
+                        preferences.setString('tel2', updatedData['tel2']);
+                      });
+                    }
+                  });
                 },
-                child: Text('Edit Data'),
-              ),
+                 child: Text('ユーザー情報を編集'),
+               ),
             ),
           ],
         ),
+      ),
       ),
     );
   }
@@ -359,6 +439,7 @@ class _EditDataState extends State<EditData> {
   TextEditingController emailController = TextEditingController();
   TextEditingController tel1Controller = TextEditingController();
   TextEditingController tel2Controller = TextEditingController();
+  TextEditingController modeController = TextEditingController();
 
   @override
   void initState() {
@@ -367,6 +448,7 @@ class _EditDataState extends State<EditData> {
     emailController = TextEditingController(text: widget.list[widget.index]['email']);
     tel1Controller = TextEditingController(text: widget.list[widget.index]['tel1']);
     tel2Controller = TextEditingController(text: widget.list[widget.index]['tel2']);
+    modeController = TextEditingController(text: widget.list[widget.index]['mode']);
     super.initState();
   }
 
@@ -375,15 +457,27 @@ class _EditDataState extends State<EditData> {
     emailController.text = widget.preferences.getString('email') ?? '';
     tel1Controller.text = widget.preferences.getString('tel1') ?? '';
     tel2Controller.text = widget.preferences.getString('tel2') ?? '';
+    modeController.text = widget.preferences.getString('mode') ?? '';
   }
 
   void saveUserData() {
-    widget.preferences.setString('name', nameController.text);
-    widget.preferences.setString('email', emailController.text);
-    widget.preferences.setString('tel1', tel1Controller.text);
-    widget.preferences.setString('tel2', tel2Controller.text);
-    Navigator.pop(context);
+    setState(() {
+      preferences.setString('name', nameController.text);
+      preferences.setString('email', emailController.text);
+      preferences.setString('tel1', tel1Controller.text);
+      preferences.setString('tel2', tel2Controller.text);
+      preferences.setString('mode', modeController.text); // modeDataを保存
+
+    });
+
+    Navigator.pop(context, {
+      'name': nameController.text,
+      'email': emailController.text,
+      'tel1': tel1Controller.text,
+      'tel2': tel2Controller.text,
+    });
   }
+
 
   @override
   Widget build(BuildContext context) {
@@ -459,9 +553,9 @@ class _EditDataState extends State<EditData> {
               SizedBox(height: 20),
               ElevatedButton(
                 onPressed: () async {
-                  void updateData() async {
-                    int userId = widget.list[widget.index]['id'] ?? 0;
-                    String idValue = userId != null ? userId.toString() : '';
+                Future<void> updateData() async {
+                  int userId = widget.list[widget.index]['id'] ?? 0;
+                    String idValue = userId.toString();
                     if (userId != null) {
                       final data = {
                         'id': userId.toString(),
@@ -475,14 +569,21 @@ class _EditDataState extends State<EditData> {
                       final result = await API().putRequest(
                         route: '/update_user_fl/$userId', data: requestData,
                       );
+                      setState(() {
+                        preferences.setString('name', nameController.text);
+                        preferences.setString('email', emailController.text);
+                        preferences.setString('tel1', tel1Controller.text);
+                        preferences.setString('tel2', tel2Controller.text);
+                      });
 
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (BuildContext context) =>
-                              Home(),
-                        ),
-                      );
-                    } else {
+                      Navigator.pop(context, {
+                        'name': nameController.text,
+                        'email': emailController.text,
+                        'tel1': tel1Controller.text,
+                        'tel2': tel2Controller.text,
+                      });
+
+                  } else {
                       return print('Some error has Occurred');
                     }
 
@@ -500,3 +601,239 @@ class _EditDataState extends State<EditData> {
     );
   }
 }
+class StopPage extends StatefulWidget {
+  List list;
+  int index;
+  final SharedPreferences preferences;
+
+
+  StopPage({required this.list, required this.index, required this.preferences});
+
+  @override
+  _StopPageState createState() => _StopPageState();
+}
+
+class _StopPageState extends State<StopPage> {
+  bool isLoading = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('サービス停止確認画面'),
+      ),
+      body: Card(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('紛失等の為にサービスを停止しますか？'),
+              SizedBox(height: 30),
+              ElevatedButton(
+                onPressed: () {
+                  updateMode(context);
+
+                },
+                child: Text('停止する'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> updateMode(BuildContext context) async {
+    setState(() {
+      isLoading = true;
+    });
+    int userId = widget.list[widget.index]['id'] ?? 0;
+    String idValue = userId.toString();
+    if (userId != null) {
+      final data = {
+        'id': idValue,
+        'mode': '1', // モードを0から1に変更するために、'1'と指定
+      };
+
+      // モードの変更リクエストを作成
+      final result = await API().postRequest(route: '/lost/stop/$idValue', data: data);
+      final response = jsonDecode(result.body);
+
+
+      // モードの変更に成功した場合、home.dartに遷移する
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(
+          builder: (context) => Home(
+            modeData: {'mode': '1'}, // モードの値を渡す
+          ),
+        ),
+      );
+
+    } else {
+      // モードの変更に失敗した場合、エラーメッセージを表示するなどの処理を行う
+      print('モードの変更に失敗しました');
+    }
+    setState(() {
+      isLoading = false;
+    });
+  }
+}
+
+
+class SuspendPage extends StatefulWidget {
+  List list;
+  int index;
+  final SharedPreferences preferences;
+
+  SuspendPage({required this.list, required this.index, required this.preferences});
+
+  @override
+  _SuspendPageState createState() => _SuspendPageState();
+}
+
+class _SuspendPageState extends State<SuspendPage> {
+  bool isLoading = false;
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('サービス一時停止確認画面'),
+      ),
+      body: Card(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('紛失等の為にサービスを一時停止しますか？'),
+              SizedBox(height: 30),
+              ElevatedButton(
+                onPressed: () {
+                  updateMode(context);
+
+                },
+                child: Text('一時停止する'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> updateMode(BuildContext context) async {
+    setState(() {
+      isLoading = true;
+    });
+    int userId = widget.list[widget.index]['id'] ?? 0;
+    String idValue = userId.toString();
+    if (userId != null) {
+      final data = {
+        'id': idValue,
+        'mode': '1', // モードを0から1に変更するために、'1'と指定
+      };
+
+      // モードの変更リクエストを作成
+      final result = await API().postRequest(route: '/lost/suspend/$idValue', data: data);
+      final response = jsonDecode(result.body);
+
+        // モードの変更に成功した場合、home.dartに遷移する
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(
+            builder: (context) => Home(
+            modeData: {
+          'mode': 1, // モードの値を指定する
+        },
+        ),
+    ),
+    );
+      } else {
+        // モードの変更に失敗した場合、エラーメッセージを表示するなどの処理を行う
+        print('モードの変更に失敗しました');
+      }
+    setState(() {
+      isLoading = false;
+    });
+    }
+  }
+
+class AgainPage extends StatefulWidget {
+  List list;
+  int index;
+  final SharedPreferences preferences;
+
+  AgainPage({required this.list, required this.index, required this.preferences});
+
+  @override
+  _AgainPageState createState() => _AgainPageState();
+}
+
+class _AgainPageState extends State<StopPage> {
+  bool isLoading = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('サービス再開確認画面'),
+      ),
+      body: Card(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('サービスを再開しますか？'),
+              SizedBox(height: 30),
+              ElevatedButton(
+                onPressed: () {
+                  updateMode(context);
+                },
+                child: Text('再開する'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> updateMode(BuildContext context) async {
+    setState(() {
+      isLoading = true;
+    });
+    int userId = widget.list[widget.index]['id'] ?? 0;
+    String idValue = userId.toString();
+    if (userId != null) {
+      final data = {
+        'id': idValue,
+        'mode': '0', // モードを0から1に変更するために、'1'と指定
+      };
+
+      // モードの変更リクエストを作成
+      final result = await API().postRequest(route: '/lost/again/$idValue', data: data);
+      final response = jsonDecode(result.body);
+
+      // モードの変更に成功した場合、home.dartに遷移する
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(
+          builder: (context) => Home(
+            modeData: {
+            'mode':'0', // モードの値を指定する
+          },
+          ),
+        ),
+      );
+    } else {
+      // モードの変更に失敗した場合、エラーメッセージを表示するなどの処理を行う
+      print('モードの変更に失敗しました');
+    }
+    setState(() {
+      isLoading = false;
+    });
+  }
+}
+
+
+

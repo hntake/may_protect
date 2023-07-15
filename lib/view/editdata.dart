@@ -41,7 +41,6 @@ class EditDataState extends State<EditData> {
 
   @override
   Widget build(BuildContext context) {
-    print(widget.list[widget.index]);
 
     return MaterialApp(
       title: 'Update Profile',
