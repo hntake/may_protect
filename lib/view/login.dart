@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import 'package:may_protect/helper/constant.dart';
 import 'package:may_protect/screens/home.dart';
@@ -8,7 +9,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 
-import '../../methods/api.dart';
+import 'package:may_protect/methods/api.dart';
 
 class Login extends StatefulWidget {
   const Login({Key? key}) : super(key: key);
@@ -25,9 +26,12 @@ class _LoginState extends State<Login> {
   Future<void> saveToken(String token) async {
     SharedPreferences preferences = await SharedPreferences.getInstance();
     await preferences.setString('token', token);
-
   }
-
+  Future<void> saveLoginInfo() async {
+    final storage = FlutterSecureStorage();
+    await storage.write(key: 'email', value: email.text.toString());
+    await storage.write(key: 'password', value: password.text.toString());
+  }
   void loginUser() async {
     setState(() {
       _isLoading = true;
@@ -37,9 +41,10 @@ class _LoginState extends State<Login> {
       'email': email.text.toString(),
       'password': password.text.toString(),
     };
-    final result = await API().postRequest(route: '/login', data: data);
+    final result = await API().postRequest(route: '/api/login', data: data);
     final response = jsonDecode(result.body);
     if (response['status'] == 200) {
+      await saveLoginInfo();
       // トークンを保存
       String token = response['token'];
       await saveToken(token);
@@ -88,6 +93,23 @@ class _LoginState extends State<Login> {
     setState(() {
       _isLoading = false;
     });
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    loadLoginInfo(); // ログイン情報を読み込む
+  }
+
+  // 保存されたメールアドレスとパスワードを読み込んで、テキストフィールドに設定する
+  void loadLoginInfo() async {
+    final storage = FlutterSecureStorage();
+    String? savedEmail = await storage.read(key: 'email');
+    String? savedPassword = await storage.read(key: 'password');
+    if (savedEmail != null && savedPassword != null) {
+      email.text = savedEmail;
+      password.text = savedPassword;
+    }
   }
 
   @override

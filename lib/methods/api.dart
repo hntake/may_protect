@@ -8,7 +8,7 @@ class API {
     required String route,
     required Map<String, String> data,
   }) async {
-    String url = apiUrl + route;
+    String url = 'https://itcha50.com' + route;
     try {
       return await http.post(
         Uri.parse(url),
@@ -25,8 +25,7 @@ class API {
     required String route,
     required Map<String, String> data,
   }) async {
-    String url = apiUrl + route;
-
+    String url = 'https://itcha50.com' + route;
     final response = await http.put(Uri.parse(url), body: data);
   }
 

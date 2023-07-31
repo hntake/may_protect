@@ -39,7 +39,7 @@ dependencies:
   shared_preferences: ^2.1.2
   url_launcher: ^6.1.11
   hexcolor: ^3.0.1
-  flutter_secure_storage: ^5.0.0
+  flutter_secure_storage: ^8.0.0
 
 
 

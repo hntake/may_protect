@@ -7,7 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:may_protect/Controllers/databasehelper.dart';
 import 'package:may_protect/view/dashboard.dart';
-import '../../methods/api.dart';
+import 'package:may_protect/methods/api.dart';
 import 'package:may_protect/helper/constant.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -567,7 +567,7 @@ class _EditDataState extends State<EditData> {
                       final Map<String, String> requestData = data.map((key, value) => MapEntry(key, value.toString()));
 
                       final result = await API().putRequest(
-                        route: '/update_user_fl/$userId', data: requestData,
+                        route: '/api/update_user_fl/$userId', data: requestData,
                       );
                       setState(() {
                         preferences.setString('name', nameController.text);
@@ -657,16 +657,19 @@ class _StopPageState extends State<StopPage> {
       };
 
       // モードの変更リクエストを作成
-      final result = await API().postRequest(route: '/lost/stop/$idValue', data: data);
+      final result = await API().postRequest(route: '/api/lost/stop/$idValue', data: data);
       final response = jsonDecode(result.body);
 
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(response['message']),
+        ),
+      );
 
       // モードの変更に成功した場合、home.dartに遷移する
-      Navigator.of(context).pushReplacement(
+      Navigator.of(context).push(
         MaterialPageRoute(
-          builder: (context) => Home(
-            modeData: {'mode': '1'}, // モードの値を渡す
-          ),
+          builder: (BuildContext context) => Login(),
         ),
       );
 
@@ -735,19 +738,20 @@ class _SuspendPageState extends State<SuspendPage> {
       };
 
       // モードの変更リクエストを作成
-      final result = await API().postRequest(route: '/lost/suspend/$idValue', data: data);
+      final result = await API().postRequest(route: '/api/lost/suspend/$idValue', data: data);
       final response = jsonDecode(result.body);
 
-        // モードの変更に成功した場合、home.dartに遷移する
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(
-            builder: (context) => Home(
-            modeData: {
-          'mode': 1, // モードの値を指定する
-        },
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(response['message']),
         ),
-    ),
-    );
+      );
+        // モードの変更に成功した場合、home.dartに遷移する
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (BuildContext context) => Login(),
+        ),
+      );
       } else {
         // モードの変更に失敗した場合、エラーメッセージを表示するなどの処理を行う
         print('モードの変更に失敗しました');
@@ -769,9 +773,31 @@ class AgainPage extends StatefulWidget {
   _AgainPageState createState() => _AgainPageState();
 }
 
-class _AgainPageState extends State<StopPage> {
+class _AgainPageState extends State<AgainPage> {
   bool isLoading = false;
+  late SharedPreferences preferences; // 追加
 
+  TextEditingController modeController = TextEditingController();
+
+
+  @override
+  void initState() {
+    preferences = widget.preferences; // 追加
+    modeController = TextEditingController(text: widget.list[widget.index]['mode']);
+    super.initState();
+  }
+  void loadUserData() {
+    modeController.text = widget.preferences.getString('mode') ?? '';
+  }
+  void saveUserData() {
+    setState(() {
+      preferences.setString('mode', modeController.text); // modeDataを保存
+    });
+
+    Navigator.pop(context, {
+      'mode': modeController.text,
+    });
+  }
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -810,28 +836,31 @@ class _AgainPageState extends State<StopPage> {
         'id': idValue,
         'mode': '0', // モードを0から1に変更するために、'1'と指定
       };
+      final Map<String, String> requestData = data.map((key, value) => MapEntry(key, value.toString()));
+
 
       // モードの変更リクエストを作成
-      final result = await API().postRequest(route: '/lost/again/$idValue', data: data);
+      final result = await API().postRequest(route: '/api/lost/again/$idValue', data: data);
       final response = jsonDecode(result.body);
 
-      // モードの変更に成功した場合、home.dartに遷移する
-      Navigator.of(context).pushReplacement(
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(response['message']),
+        ),
+      );
+      setState(() {
+        preferences.setString('mode', modeController.text);
+      });
+      // モードの変更に成功した場合、login.dartに遷移する
+      Navigator.of(context).push(
         MaterialPageRoute(
-          builder: (context) => Home(
-            modeData: {
-            'mode':'0', // モードの値を指定する
-          },
-          ),
+          builder: (BuildContext context) => Login(),
         ),
       );
     } else {
       // モードの変更に失敗した場合、エラーメッセージを表示するなどの処理を行う
       print('モードの変更に失敗しました');
     }
-    setState(() {
-      isLoading = false;
-    });
   }
 }
 
